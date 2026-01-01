@@ -6,7 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Data\SkyData.fs" />
+    <Compile Include="Data\CoachData.fs" />
+    <Compile Include="CoachModules\ConstellationCoach.fs" />
     <Compile Include="Library.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PracticalAstronomy" Version="1.0.0" />
   </ItemGroup>
 
 </Project>
