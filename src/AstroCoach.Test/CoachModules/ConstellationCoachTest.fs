@@ -2,7 +2,7 @@
 
 open System
 open Xunit
-open AstroCoach.Core.CoachData
+open AstroCoach.Core.ConstellationCoachData
 open AstroCoach.Core.SkyData
 open AstroCoach.Core.ConstellationCoach
 
@@ -110,3 +110,76 @@ let ``createCoachWithDifficulty selects constellation via RNG`` () =
         createCoachWithDifficulty rng fakeStorage DifficultyLevel.Easy
 
     Assert.Equal(7L, coach.constellation.id)
+
+
+[<Fact>]
+let ``generateQuestion delegates to generateCoach for coach selection`` () =
+    let seq = [ 0; 1; 42; 0; 0; 0 ]
+    let rng1 = rngFromList seq
+    let rng2 = rngFromList seq
+
+    let expectedCoach = generateCoach rng1 fakeStorage
+    let question = generateQuestion rng2 fakeStorage 3
+
+    Assert.Equal(expectedCoach.constellation.id, question.coach.constellation.id)
+
+[<Fact>]
+let ``generateQuestion returns the requested number of distinct wrong constellations excluding the correct one`` () =
+    let rng = rngFromList [ 0; 0; 10; 0; 1; 2 ]
+    let question = generateQuestion rng fakeStorage 3
+
+    let wrongIds = question.wrongConstellations |> List.map (fun c -> c.id)
+    Assert.Equal(3, List.length wrongIds)
+    Assert.DoesNotContain(question.coach.constellation.id, wrongIds)
+    Assert.Equal(List.length wrongIds, (wrongIds |> Set.ofList |> Set.count))
+
+[<Fact>]
+let ``generateQuestion caps wrongCount to available candidates (constellationCount - 1)`` () =
+    let manyZeros = List.replicate 90 0
+    let rng = rngFromList manyZeros
+    let question = generateQuestion rng fakeStorage 200
+
+    Assert.Equal(88 - 1, List.length question.wrongConstellations)
+    Assert.DoesNotContain(question.coach.constellation.id, question.wrongConstellations |> List.map (fun c -> c.id))
+
+[<Fact>]
+let ``createQuestionWithDifficulty delegates to createCoachWithDifficulty for coach selection`` () =
+    // same RNG sequence used for both to ensure identical coach outcome
+    let seq = [ 7; 1; 2; 3 ]
+    let rng1 = rngFromList seq
+    let rng2 = rngFromList seq
+
+    let expectedCoach = createCoachWithDifficulty rng1 fakeStorage DifficultyLevel.Medium
+    let question = createQuestionWithDifficulty rng2 fakeStorage DifficultyLevel.Medium
+
+    Assert.Equal(expectedCoach.constellation.id, question.coach.constellation.id)
+
+[<Fact>]
+let ``createQuestionWithDifficulty returns one wrong for Easy, excludes correct and ensures uniqueness`` () =
+    // first value picks correct constellation; second value is consumed by sampling loop (k = 1)
+    let rng = rngFromList [ 10; 0 ]
+    let question = createQuestionWithDifficulty rng fakeStorage DifficultyLevel.Easy
+
+    Assert.Equal(1, List.length question.wrongConstellations)
+    Assert.DoesNotContain(question.coach.constellation.id, question.wrongConstellations |> List.map (fun c -> c.id))
+    Assert.Equal(1, (question.wrongConstellations |> List.map (fun c -> c.id) |> Set.ofList |> Set.count))
+
+[<Fact>]
+let ``createQuestionWithDifficulty returns two wrongs for Medium, excludes correct and ensures uniqueness`` () =
+    // first value picks correct constellation; next two values are consumed by sampling loop (k = 2)
+    let rng = rngFromList [ 5; 1; 2 ]
+    let question = createQuestionWithDifficulty rng fakeStorage DifficultyLevel.Medium
+
+    Assert.Equal(2, List.length question.wrongConstellations)
+    Assert.DoesNotContain(question.coach.constellation.id, question.wrongConstellations |> List.map (fun c -> c.id))
+    Assert.Equal(2, (question.wrongConstellations |> List.map (fun c -> c.id) |> Set.ofList |> Set.count))
+
+[<Fact>]
+let ``createQuestionWithDifficulty returns three wrongs for Hard, excludes correct and ensures uniqueness`` () =
+    // first value picks correct constellation; next three values are consumed by sampling loop (k = 3)
+    let rng = rngFromList [ 7; 3; 4; 5 ]
+    let question = createQuestionWithDifficulty rng fakeStorage DifficultyLevel.Hard
+
+    Assert.Equal(3, List.length question.wrongConstellations)
+    Assert.DoesNotContain(question.coach.constellation.id, question.wrongConstellations |> List.map (fun c -> c.id))
+    Assert.Equal(3, (question.wrongConstellations |> List.map (fun c -> c.id) |> Set.ofList |> Set.count))

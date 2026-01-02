@@ -1,4 +1,4 @@
-﻿module AstroCoach.Core.CoachData
+﻿module AstroCoach.Core.ConstellationCoachData
 
 type DifficultyLevel =
 | Easy
@@ -15,4 +15,9 @@ type ConstellationCoachData = {
     constellation: SkyData.ConstellationInfo
     hints: ConstellationHints
     magnitude: float
+}
+
+type Question = {
+    coach: ConstellationCoachData
+    wrongConstellations: SkyData.ConstellationInfo list
 }
