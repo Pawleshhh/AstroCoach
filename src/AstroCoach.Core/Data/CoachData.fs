@@ -17,7 +17,14 @@ type ConstellationCoachData = {
     magnitude: float
 }
 
-type Question = {
+type QuestionBaseInfo = {
     coach: ConstellationCoachData
+}
+
+type ClosedQuestionInfo = {
     wrongConstellations: SkyData.ConstellationInfo list
 }
+
+type ConstellationQuestion =
+| OpenQuestion of QuestionBaseInfo
+| ClosedQuestion of QuestionBaseInfo * ClosedQuestionInfo

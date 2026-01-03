@@ -49,14 +49,11 @@ let private difficultyMaxMagnitude difficulty =
     | Medium -> 6
     | Hard -> 10
 
-let createCoachWithDifficulty
-    (rng: Rng)
-    (getConstellation: GetConstellation)
+let createConstellationCoach
+    (constellation: ConstellationInfo)
     (difficulty: DifficultyLevel)
     : ConstellationCoachData =
     
-    let constellation = randomConstellation rng getConstellation
-
     let hints = difficultyHints difficulty
     let maxMag = difficultyMaxMagnitude difficulty
 
@@ -65,6 +62,16 @@ let createCoachWithDifficulty
         hints = hints
         magnitude = maxMag
     }
+
+let generateCoachWithDifficulty
+    (rng: Rng)
+    (getConstellation: GetConstellation)
+    (difficulty: DifficultyLevel)
+    : ConstellationCoachData =
+    
+    let constellation = randomConstellation rng getConstellation
+
+    createConstellationCoach constellation difficulty
 
 /// Sample up to `count` distinct wrong constellation indices using the provided RNG,
 /// excluding `excludeIndex`. Uses a partial Fisher–Yates shuffle to avoid retrying RNG
@@ -99,11 +106,26 @@ let private sampleWrongConstellations
         |> Array.toList
         |> List.map (fun idx -> getConstellation idx)
 
-let generateQuestion
+let createQuestion
+    (coach: ConstellationCoachData)
+    (makeQuestion: ConstellationCoachData -> ConstellationQuestion) =
+
+    makeQuestion coach
+
+let createClosedQuestion
+    (wrongConstellations: ConstellationInfo list)
+    (coach: ConstellationCoachData) =
+
+    ClosedQuestion({ coach = coach }, { wrongConstellations = wrongConstellations })
+
+let createOpenQuestion (coach: ConstellationCoachData) =
+    OpenQuestion({ coach = coach })
+
+let generateClosedQuestion
     (rng: Rng)
     (getConstellation: GetConstellation)
     wrongCount
-    : Question =
+    : ConstellationQuestion =
 
     let coach = generateCoach rng getConstellation
     let correctId = coach.constellation.id
@@ -113,11 +135,15 @@ let generateQuestion
     let wrongConstellations =
         sampleWrongConstellations rng getConstellation excludeIndex wrongCount
 
-    {
-        coach = coach
-        wrongConstellations = wrongConstellations
-    }
+    createQuestion coach (createClosedQuestion wrongConstellations)
 
+let generateOpenQuestion
+    (rng: Rng)
+    (getConstellation: GetConstellation)
+    : ConstellationQuestion =
+
+    let coach = generateCoach rng getConstellation
+    createQuestion coach createOpenQuestion
 
 let private difficultyWrongCount difficulty =
     match difficulty with
@@ -125,13 +151,13 @@ let private difficultyWrongCount difficulty =
     | Medium -> 2
     | Hard -> 3
 
-let createQuestionWithDifficulty
+let generateClosedQuestionWithDifficulty
     (rng: Rng)
     (getConstellation: GetConstellation)
     (difficulty: DifficultyLevel)
-    : Question =
+    : ConstellationQuestion =
 
-    let coach = createCoachWithDifficulty rng getConstellation difficulty
+    let coach = generateCoachWithDifficulty rng getConstellation difficulty
     let correctId = coach.constellation.id
     
     let excludeIndex = int correctId
@@ -139,8 +165,15 @@ let createQuestionWithDifficulty
     let wrongConstellations =
         (difficultyWrongCount difficulty)
         |> sampleWrongConstellations rng getConstellation excludeIndex
+        
+    createQuestion coach (createClosedQuestion wrongConstellations)
 
-    {
-        coach = coach
-        wrongConstellations = wrongConstellations
-    }
+let generateOpenQuestionWithDifficulty
+    (rng: Rng)
+    (getConstellation: GetConstellation)
+    (difficulty: DifficultyLevel)
+    : ConstellationQuestion =
+
+    let coach = generateCoachWithDifficulty rng getConstellation difficulty
+    
+    createQuestion coach createOpenQuestion
